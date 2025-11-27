@@ -1,0 +1,668 @@
+# BIGLIETTO_PULMAN.py
+# Requisiti: PySide6, qrcode[pil], Pillow
+# pip install PySide6 "qrcode[pil]" Pillow
+
+from PySide6.QtCore import Qt, QTimer, QTime, QSize, QPoint, QRect
+from PySide6.QtGui import QPixmap, QPainter, QColor, QLinearGradient, QPolygon, QPen
+from PySide6.QtWidgets import (
+    QApplication, QWidget, QLabel, QVBoxLayout, QHBoxLayout, QScrollArea,
+    QFrame, QPushButton, QMainWindow, QSpacerItem, QSizePolicy
+)
+import sys
+import io
+import qrcode
+from datetime import datetime, timedelta
+
+# Colori
+PRIMARY_GREEN = "#1f7a3a"      # sfondo app
+CARD_BG = "white"
+VALIDATION_BG = "#f3f4f6"      # rettangolo “sporco” per QR + orario
+TEXT_PRIMARY = "#111827"
+TEXT_SECONDARY = "#6b7280"
+SEPARATOR = "#e5e7eb"
+BLOCK_GREEN = "#1f7a3a"        # blocco “Tempo restante”
+
+MOBILE_W, MOBILE_H = 392, 780  # finestra tipo smartphone
+
+
+def make_qr_image(data: str, box_size=8, border=2) -> QPixmap:
+    """Genera il QR code con sfondo grigio come il rettangolo di validazione."""
+    qr = qrcode.QRCode(version=2, box_size=box_size, border=border)
+    qr.add_data(data)
+    qr.make(fit=True)
+    img = qr.make_image(fill_color="black", back_color=VALIDATION_BG)
+    buf = io.BytesIO()
+    img.save(buf, format="PNG")
+    qpix = QPixmap()
+    qpix.loadFromData(buf.getvalue(), "PNG")
+    return qpix
+
+
+class Divider(QFrame):
+    """Linea orizzontale di separazione."""
+    def __init__(self):
+        super().__init__()
+        self.setFixedHeight(1)
+        self.setStyleSheet(f"background:{SEPARATOR}; border:none;")
+
+
+class Chip(QFrame):
+    """Riga 'Tempo restante: X' con solo il tempo in grassetto."""
+    def __init__(self, initial_time: str = "calcolo…"):
+        super().__init__()
+        self.setStyleSheet("""
+            QFrame { background: transparent; }
+            QLabel { color: white; font-size: 13px; }
+        """)
+        lay = QHBoxLayout(self)
+        lay.setContentsMargins(0, 0, 0, 0)
+        self.label = QLabel(f"Tempo restante: <b>{initial_time}</b>")
+        lay.addWidget(self.label, 0, Qt.AlignLeft)
+
+
+class MovingTrianglesBar(QFrame):
+    """Barra azzurra con 3 righe di triangolini che scorrono orizzontalmente."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFixedHeight(30)
+        self.offset = 0
+        self.tri_width = 20
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self._step)
+        self.timer.start(40)
+
+    def _step(self):
+        self.offset = (self.offset + 1) % self.tri_width
+        self.update()
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        rect = self.rect()
+
+        grad = QLinearGradient(0, 0, rect.width(), 0)
+        grad.setColorAt(0, QColor("#e5f3ff"))
+        grad.setColorAt(1, QColor("#c4ddff"))
+        painter.fillRect(rect, grad)
+
+        painter.setPen(Qt.NoPen)
+        painter.setBrush(QColor("#7fb0ff"))
+
+        w = self.tri_width
+        total_h = rect.height()
+        row_h = total_h / 3.0
+
+        for row in range(3):
+            y_top = int(row * row_h)
+            y_bottom = int((row + 1) * row_h)
+            phase = row * (w / 2.0)
+            x = -w + self.offset + phase
+            while x < rect.width() + w:
+                poly = QPolygon([
+                    QPoint(int(x), y_bottom),
+                    QPoint(int(x + w / 2), y_top),
+                    QPoint(int(x + w), y_bottom),
+                ])
+                painter.drawPolygon(poly)
+                x += w
+
+
+# ---------------- Icone vettoriali ---------------- #
+
+class ClockIcon(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(18, 18)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+        rect = self.rect().adjusted(1, 1, -1, -1)
+
+        pen = QPen(QColor(TEXT_SECONDARY))
+        pen.setWidth(2)
+        painter.setPen(pen)
+        painter.setBrush(Qt.NoBrush)
+
+        painter.drawEllipse(rect)
+
+        cx = rect.center().x()
+        cy = rect.center().y()
+        painter.drawLine(cx, cy, cx, rect.top() + 5)   # ore
+        painter.drawLine(cx, cy, rect.right() - 3, cy) # minuti
+
+
+class TicketIcon(QWidget):
+    """Icona ticket a due livelli (uno azzurro dietro e uno bianco davanti)."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(20, 20)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+
+        blue = QColor("#60a5fa")
+        gray = QColor(TEXT_SECONDARY)
+
+        # ticket posteriore
+        pen_back = QPen(blue)
+        pen_back.setWidth(2)
+        pen_back.setCapStyle(Qt.RoundCap)
+        pen_back.setJoinStyle(Qt.RoundJoin)
+        painter.setPen(pen_back)
+        painter.setBrush(Qt.NoBrush)
+
+        r_back = self.rect().adjusted(2, 2, -8, -6)
+        painter.drawRoundedRect(r_back, 3, 3)
+
+        notch_h = 5
+        y_mid_back = r_back.center().y()
+        painter.drawLine(r_back.right(), y_mid_back - notch_h // 2,
+                         r_back.right() + 2, y_mid_back)
+        painter.drawLine(r_back.right() + 2, y_mid_back,
+                         r_back.right(), y_mid_back + notch_h // 2)
+
+        # ticket anteriore
+        pen_front = QPen(gray)
+        pen_front.setWidth(2)
+        pen_front.setCapStyle(Qt.RoundCap)
+        pen_front.setJoinStyle(Qt.RoundJoin)
+        painter.setPen(pen_front)
+        painter.setBrush(QColor("white"))
+
+        r_front = self.rect().adjusted(6, 4, -2, -2)
+        painter.drawRoundedRect(r_front, 3, 3)
+
+        y_mid_front = r_front.center().y()
+        painter.drawLine(r_front.right(), y_mid_front - notch_h // 2,
+                         r_front.right() + 2, y_mid_front)
+        painter.drawLine(r_front.right() + 2, y_mid_front,
+                         r_front.right(), y_mid_front + notch_h // 2)
+
+        hole_center = QPoint(r_front.left() + 6, r_front.center().y())
+        painter.drawEllipse(hole_center, 2, 2)
+
+class LockIcon(QWidget):
+    """Icona lucchetto compatta, simmetrica, con serratura centrale."""
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setFixedSize(16, 16)
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        painter.setRenderHint(QPainter.Antialiasing)
+
+        gray = QColor(TEXT_SECONDARY)
+        pen = QPen(gray)
+        pen.setWidth(2)
+        pen.setCapStyle(Qt.RoundCap)
+        pen.setJoinStyle(Qt.RoundJoin)
+        painter.setPen(pen)
+        painter.setBrush(Qt.NoBrush)
+
+        r = self.rect()
+
+        # corpo del lucchetto (rettangolo arrotondato, ben centrato)
+        body = QRect(r.left() + 3, r.top() + 7,
+                     r.width() - 6, r.height() - 9)
+        painter.drawRoundedRect(body, 3, 3)
+
+        # arco superiore: cerchio che appoggia esattamente sul corpo
+        arc_h = 8
+        arc_rect = QRect(body.left(), body.top() - arc_h + 2,
+                         body.width(), arc_h)
+        painter.drawArc(arc_rect, 0, 180 * 16)
+
+        # serratura piccola e centrale (foro tondo + stelo corto)
+        cx = body.center().x()
+        cy = body.center().y()
+
+        # foro circolare
+        painter.drawEllipse(QPoint(cx, cy - 1), 1, 1)
+        # stelo
+        painter.drawLine(cx, cy + 1, cx, body.bottom() - 2)
+
+class ExpandDialog(QFrame):
+    """Finestra per ingrandire il QR code."""
+    def __init__(self, pix: QPixmap, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle("QR Code")
+        self.setStyleSheet("background:white;")
+        lay = QVBoxLayout(self)
+        lay.setContentsMargins(10, 10, 10, 10)
+
+        lbl = QLabel()
+        lbl.setPixmap(pix.scaled(360, 360, Qt.KeepAspectRatio,
+                                 Qt.SmoothTransformation))
+        lbl.setAlignment(Qt.AlignCenter)
+        lay.addWidget(lbl)
+
+        self.setFixedSize(380, 400)
+
+
+class TicketCard(QFrame):
+    """Card bianca del ticket con tutti i contenuti."""
+    def __init__(self):
+        super().__init__()
+        self.setObjectName("ticketCard")
+        self.setMinimumHeight(900)
+
+        # orari dinamici
+        self.activated_dt = datetime.now()
+        self.issue_dt = self.activated_dt - timedelta(hours=0.6)
+        self.valid_minutes = 130   # durata biglietto (minuti)
+
+        self.setStyleSheet(f"""
+        QFrame#ticketCard {{
+            background: {CARD_BG};
+            border-radius: 28px;
+        }}
+        QLabel.title {{
+            color: {TEXT_PRIMARY};
+            font-size: 18px;
+            font-weight: 700;
+        }}
+        QLabel.subtitle {{
+            color: {TEXT_PRIMARY};
+            font-size: 18px;
+            font-weight: 700;
+        }}
+        QLabel.helper {{
+            color: {TEXT_SECONDARY};
+            font-size: 15px;
+        }}
+        QLabel.section {{
+            color: {TEXT_PRIMARY};
+            font-size: 14px;
+            font-weight: 600;
+        }}
+        QLabel.meta {{
+            color: {TEXT_SECONDARY};
+            font-size: 13px;
+        }}
+        QLabel.price {{
+            color: {TEXT_PRIMARY};
+            font-size: 22px;
+            font-weight: 700;
+        }}
+        """)
+
+        main = QVBoxLayout(self)
+        main.setContentsMargins(18, 18, 18, 18)
+        main.setSpacing(10)
+
+        # ---------- intestazione + logo ---------- #
+        header_box = QVBoxLayout()
+        header_box.setContentsMargins(0, 0, 0, 0)
+        header_box.setSpacing(2)  # spazio ridotto tra titolo e tariffa
+
+        logo_placeholder = QLabel()
+        logo_placeholder.setFixedHeight(30)
+        logo_placeholder.setAlignment(Qt.AlignLeft | Qt.AlignVCenter)
+        logo_placeholder.setContentsMargins(0, 4, 0, 0)
+
+        logo_pix = QPixmap("LOGO.png")
+        if not logo_pix.isNull():
+            logo_scaled = logo_pix.scaledToHeight(24, Qt.SmoothTransformation)
+            logo_placeholder.setPixmap(logo_scaled)
+        else:
+            logo_placeholder.setText("(logo)")
+            logo_placeholder.setStyleSheet("color:#999; font-size:10px;")
+
+        header_box.addWidget(logo_placeholder)
+        header_box.addSpacing(10)  # spazio extra solo tra logo e titolo
+
+        title = QLabel("Automobilistico Corsa Semplice")
+        title.setProperty("class", "title")
+        header_box.addWidget(title)
+
+        subtitle = QLabel("Tariffa 11 (100,1 - 125 km)")
+        subtitle.setProperty("class", "subtitle")
+        header_box.addWidget(subtitle)
+
+        helper = QLabel(
+            "Il titolo dà diritto ad effettuare un viaggio di corsa semplice"
+        )
+        helper.setWordWrap(True)
+        helper.setProperty("class", "helper")
+
+        main.addLayout(header_box)
+        main.addWidget(helper)
+
+        # ---------- rettangolo validazione (collassabile) ---------- #
+        validation_box = QFrame()
+        validation_box.setObjectName("validationBox")
+        validation_box.setStyleSheet(f"""
+            #validationBox {{
+                background: {VALIDATION_BG};
+                border-radius: 18px;
+            }}
+        """)
+        vlay = QVBoxLayout(validation_box)
+        vlay.setContentsMargins(14, 12, 14, 12)
+        vlay.setSpacing(8)
+
+        # header: ticket + testo + freccia
+        header_row = QHBoxLayout()
+        ticket_icon = TicketIcon()
+        sec = QLabel("Controllo e validazione")
+        sec.setProperty("class", "section")
+
+        self.toggle_btn = QPushButton("˄")
+        self.toggle_btn.setCheckable(True)
+        self.toggle_btn.setChecked(True)
+        self.toggle_btn.setStyleSheet("""
+            QPushButton {
+                border: none;
+                background: transparent;
+                font-size: 20px;
+                color: #6b7280;
+            }
+        """)
+        self.toggle_btn.clicked.connect(self.toggle_validation_content)
+
+        header_row.addWidget(ticket_icon, 0, Qt.AlignLeft)
+        header_row.addSpacing(6)
+        header_row.addWidget(sec, 0, Qt.AlignLeft)
+        header_row.addStretch()
+        header_row.addWidget(self.toggle_btn, 0, Qt.AlignRight)
+        vlay.addLayout(header_row)
+
+        # contenuto collassabile
+        self.validation_content = QWidget()
+        content_v = QVBoxLayout(self.validation_content)
+        content_v.setContentsMargins(0, 8, 0, 0)
+        content_v.setSpacing(8)
+
+        # QR
+        self.ticket_code = "7577/330715"
+        qr_data = f"Codice Ticket: {self.ticket_code}"
+        self.qr_pix = make_qr_image(qr_data, box_size=8)
+
+        self.qr_label = QLabel()
+        self.qr_label.setPixmap(
+            self.qr_pix.scaled(240, 240, Qt.KeepAspectRatio,
+                               Qt.SmoothTransformation)
+        )
+        self.qr_label.setAlignment(Qt.AlignCenter)
+        content_v.addWidget(self.qr_label, 0, Qt.AlignHCenter)
+
+        # “Ingrandisci QRCode”
+        self.enlarge = QPushButton("Ingrandisci QRCode")
+        self.enlarge.setCursor(Qt.PointingHandCursor)
+        self.enlarge.setStyleSheet("""
+            QPushButton {
+                color: #2563eb;
+                background: transparent;
+                border: none;
+                font-weight: 600;
+                font-size: 13px;
+            }
+            QPushButton:hover { text-decoration: underline; }
+        """)
+        self.enlarge.clicked.connect(self.open_qr_dialog)
+
+        enlarge_row = QHBoxLayout()
+        enlarge_row.addStretch()
+        enlarge_row.addWidget(self.enlarge)
+        enlarge_row.addStretch()
+        content_v.addLayout(enlarge_row)
+
+        # riga orologio + tempo + lucchetto + 612
+        row_time = QHBoxLayout()
+        clock_icon = ClockIcon()
+        self.clock_lbl = QLabel(QTime.currentTime().toString("HH:mm:ss"))
+        self.clock_lbl.setStyleSheet("font-weight:700;")
+        self.clock_lbl.setProperty("class", "meta")
+
+        row_time.addWidget(clock_icon, 0, Qt.AlignLeft)
+        row_time.addSpacing(4)
+        row_time.addWidget(self.clock_lbl, 0, Qt.AlignLeft)
+        row_time.addStretch()
+
+        lock_group = QHBoxLayout()
+        self.lock_icon = LockIcon()
+        self.badge_lbl = QLabel("612")
+        self.badge_lbl.setProperty("class", "meta")
+        lock_group.addWidget(self.lock_icon, 0, Qt.AlignRight)
+        lock_group.addSpacing(4)
+        lock_group.addWidget(self.badge_lbl, 0, Qt.AlignRight)
+
+        row_time.addLayout(lock_group)
+        content_v.addLayout(row_time)
+
+        vlay.addWidget(self.validation_content)
+        main.addWidget(validation_box)
+
+        # ---------- barra triangolini ---------- #
+        deco = MovingTrianglesBar()
+        main.addWidget(deco)
+
+        # ---------- blocco verde: tempo restante + attivato il ---------- #
+        green_block = QFrame()
+        green_block.setObjectName("greenBlock")
+        green_block.setStyleSheet(f"""
+            #greenBlock {{
+                background: {BLOCK_GREEN};
+                border-radius: 10px;
+            }}
+        """)
+        gb_lay = QVBoxLayout(green_block)
+        gb_lay.setContentsMargins(12, 8, 12, 8)
+        gb_lay.setSpacing(2)
+
+        self.chip = Chip()
+        gb_lay.addWidget(self.chip)
+
+        act_lbl = QLabel(
+            f"Attivato il: <b>{self.activated_dt.strftime('%d/%m/%Y - %H:%M')}</b>"
+        )
+        act_lbl.setStyleSheet("color:white; font-size:12px;")
+        gb_lay.addWidget(act_lbl)
+
+        main.addWidget(green_block)
+
+        # ---------- parte bassa: emissione, costo, dettagli, codice ---------- #
+        issue_box = QVBoxLayout()
+        issue_label = QLabel("Emesso il:")
+        issue_label.setProperty("class", "meta")
+
+        issue_datetime = QLabel(
+            f"<b>{self.issue_dt.strftime('%d/%m/%Y - %H:%M')}</b>"
+        )
+        issue_datetime.setStyleSheet("color:#111827; font-size:13px;")
+        issue_datetime.setProperty("class", "meta")
+
+        issue_box.addWidget(issue_label)
+        issue_box.addWidget(issue_datetime)
+        main.addLayout(issue_box)
+
+        cost_row = QHBoxLayout()
+        c_lbl = QLabel("Costo")
+        c_lbl.setProperty("class", "meta")
+        price = QLabel("7,20 €")
+        price.setProperty("class", "price")
+        cost_row.addWidget(c_lbl, 1, Qt.AlignLeft)
+        cost_row.addWidget(price, 0, Qt.AlignRight)
+        main.addLayout(cost_row)
+
+        main.addWidget(Divider())
+
+        details_row = QHBoxLayout()
+        det = QLabel("Dettagli")
+        det.setProperty("class", "section")
+
+        read_all = QPushButton("Leggi tutto")
+        read_all.setCursor(Qt.PointingHandCursor)
+        read_all.setStyleSheet("""
+            QPushButton {
+                color:#2563eb;
+                background:transparent;
+                border:none;
+                font-weight:600;
+                font-size:13px;
+            }
+        """)
+        details_row.addWidget(det, 1, Qt.AlignLeft)
+        details_row.addWidget(read_all, 0, Qt.AlignRight)
+        main.addLayout(details_row)
+
+        code_row = QHBoxLayout()
+        code_lbl_left = QLabel("Codice Ticket:")
+        code_lbl_left.setProperty("class", "meta")
+        code_lbl_right = QLabel(self.ticket_code)
+        code_lbl_right.setProperty("class", "meta")
+        code_row.addWidget(code_lbl_left, 1, Qt.AlignLeft)
+        code_row.addWidget(code_lbl_right, 0, Qt.AlignRight)
+        main.addLayout(code_row)
+
+        main.addSpacerItem(QSpacerItem(
+            0, 0, QSizePolicy.Minimum, QSizePolicy.Expanding
+        ))
+
+        # timer per orologio e countdown
+        self.timer = QTimer(self)
+        self.timer.timeout.connect(self._tick)
+        self.timer.start(1000)
+        self._tick()
+
+    # ---------- metodi ---------- #
+
+    def toggle_validation_content(self):
+        visible = self.validation_content.isVisible()
+        self.validation_content.setVisible(not visible)
+        self.toggle_btn.setText("˄" if not visible else "˅")
+
+    def open_qr_dialog(self):
+        dlg = ExpandDialog(self.qr_pix, self)
+        dlg.show()
+
+    def _tick(self):
+        self.clock_lbl.setText(QTime.currentTime().toString("HH:mm:ss"))
+        expires = self.activated_dt + timedelta(minutes=self.valid_minutes)
+        remaining = expires - datetime.now()
+        if remaining.total_seconds() <= 0:
+            txt = "Scaduto"
+        else:
+            h = remaining.seconds // 3600
+            m = (remaining.seconds % 3600) // 60
+            txt = f"{h} h {m} min"
+        self.chip.label.setText(f"Tempo restante: <b>{txt}</b>")
+
+
+class AppWindow(QMainWindow):
+    """Finestra principale stile app mobile con area scrollabile."""
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Ticket attivo")
+        self.setFixedSize(QSize(MOBILE_W, MOBILE_H))
+
+        central = QWidget()
+        self.setCentralWidget(central)
+        root = QVBoxLayout(central)
+        root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+
+        # barra superiore
+        header = QFrame()
+        header.setStyleSheet(f"background:{PRIMARY_GREEN};")
+        h_lay = QHBoxLayout(header)
+        h_lay.setContentsMargins(16, 16, 16, 8)
+
+        back = QPushButton("‹")
+        back.setStyleSheet("""
+            QPushButton {
+                color:white;
+                background:transparent;
+                border:none;
+                font-size:20px;
+            }
+        """)
+        title = QLabel("Ticket attivo")
+        title.setStyleSheet("color:white; font-size:18px; font-weight:700;")
+
+        h_lay.addWidget(back, 0, Qt.AlignLeft)
+        h_lay.addStretch(1)
+        h_lay.addWidget(title, 0, Qt.AlignCenter)
+        h_lay.addStretch(1)
+
+        root.addWidget(header)
+
+        # sfondo verde + scroll
+        container_bg = QFrame()
+        container_bg.setObjectName("bgContainer")
+        container_bg.setStyleSheet(f"#bgContainer {{ background:{PRIMARY_GREEN}; }}")
+        bg_layout = QVBoxLayout(container_bg)
+        bg_layout.setContentsMargins(12, 8, 12, 12)
+        bg_layout.setSpacing(0)
+
+        scroll = QScrollArea()
+        scroll.setWidgetResizable(True)
+        scroll.setFrameShape(QFrame.NoFrame)
+        scroll.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+
+        # scrollbar invisibile
+        scroll.verticalScrollBar().setStyleSheet("""
+            QScrollBar:vertical {
+                background: transparent;
+                width: 0px;
+                margin: 0;
+            }
+            QScrollBar::handle:vertical {
+                background: transparent;
+            }
+            QScrollBar::add-line:vertical,
+            QScrollBar::sub-line:vertical,
+            QScrollBar::up-arrow:vertical,
+            QScrollBar::down-arrow:vertical,
+            QScrollBar::add-page:vertical,
+            QScrollBar::sub-page:vertical {
+                background: none;
+                height: 0;
+            }
+        """)
+
+        # scroll trasparente per mostrare il verde intorno ai bordi
+        scroll.setStyleSheet("""
+            QScrollArea { background: transparent; border: none; }
+            QScrollArea > QWidget { background: transparent; }
+            QScrollArea > QWidget > QWidget { background: transparent; }
+        """)
+
+        inner = QWidget()
+        v = QVBoxLayout(inner)
+        v.setContentsMargins(0, 0, 0, 0)
+        v.setSpacing(0)
+
+        card = TicketCard()
+        v.addWidget(card)
+
+        # bordo verde finale sotto il ticket
+        v.addSpacerItem(QSpacerItem(
+            0, 60, QSizePolicy.Minimum, QSizePolicy.Expanding
+        ))
+
+        scroll.setWidget(inner)
+        bg_layout.addWidget(scroll)
+        root.addWidget(container_bg)
+
+        self.setStyleSheet(f"""
+            QMainWindow {{
+                background:{PRIMARY_GREEN};
+                font-family:"Segoe UI","Roboto","Helvetica Neue",Arial;
+                color:{TEXT_PRIMARY};
+            }}
+        """)
+
+
+def main():
+    app = QApplication(sys.argv)
+    w = AppWindow()
+    w.show()
+    sys.exit(app.exec())
+
+
+if __name__ == "__main__":
+    main()
