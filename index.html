@@ -2,46 +2,176 @@
 <html lang="it">
 <head>
   <meta charset="UTF-8">
-  <title>Ticket attivo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ticket attivo</title>
   <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
-      margin: 0;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       background: #1f7a3a;
       display: flex;
-      justify-content: center;
+      flex-direction: column;
+      min-height: 100vh;
+    }
+    .header {
+      background: #1f7a3a;
+      color: white;
       padding: 16px;
+      text-align: center;
+      font-size: 18px;
+      font-weight: 700;
+    }
+    .container {
+      flex: 1;
+      padding: 12px;
+      overflow-y: auto;
     }
     .card {
       background: white;
       border-radius: 28px;
-      width: 100%;
-      max-width: 392px;
       padding: 18px;
-      box-sizing: border-box;
+      max-width: 392px;
+      margin: 0 auto;
     }
     h1 {
       font-size: 18px;
-      margin: 0 0 4px;
+      font-weight: 700;
+      margin-bottom: 4px;
+      color: #111827;
     }
     h2 {
       font-size: 18px;
-      margin: 0 0 6px;
       font-weight: 700;
+      margin-bottom: 6px;
+      color: #111827;
     }
-    p {
-      margin: 0;
+    .helper {
+      color: #6b7280;
+      font-size: 15px;
+      margin-bottom: 16px;
+    }
+    .validation-box {
+      background: #f3f4f6;
+      border-radius: 18px;
+      padding: 14px;
+      margin-bottom: 16px;
+    }
+    .section-title {
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 8px;
+      color: #111827;
+    }
+    .qr-placeholder {
+      width: 200px;
+      height: 200px;
+      background: #e5e7eb;
+      border-radius: 8px;
+      margin: 12px auto;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       color: #6b7280;
       font-size: 14px;
+    }
+    .green-block {
+      background: #1f7a3a;
+      border-radius: 10px;
+      padding: 12px;
+      color: white;
+      margin: 16px 0;
+    }
+    .meta {
+      color: #6b7280;
+      font-size: 13px;
+      margin: 8px 0;
+    }
+    .price {
+      font-size: 22px;
+      font-weight: 700;
+      color: #111827;
+    }
+    .cost-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin: 12px 0;
+    }
+    .divider {
+      height: 1px;
+      background: #e5e7eb;
+      margin: 16px 0;
     }
   </style>
 </head>
 <body>
-  <div class="card">
-    <h1>Automobilistico Corsa Semplice</h1>
-    <h2>Tariffa 11 (100,1 - 125 km)</h2>
-    <p>Il titolo dà diritto ad effettuare un viaggio di corsa semplice.</p>
+  <div class="header">Ticket attivo</div>
+  <div class="container">
+    <div class="card">
+      <h1>Automobilistico Corsa Semplice</h1>
+      <h2>Tariffa 11 (100,1 - 125 km)</h2>
+      <p class="helper">Il titolo dà diritto ad effettuare un viaggio di corsa semplice.</p>
+
+      <div class="validation-box">
+        <div class="section-title">Controllo e validazione</div>
+        <div class="qr-placeholder">QR Code</div>
+        <p class="meta">🕐 Ora corrente: <span id="clock">--:--:--</span></p>
+      </div>
+
+      <div class="green-block">
+        <p><strong>Tempo restante:</strong> <span id="countdown">2 h 10 min</span></p>
+        <p style="font-size: 12px; margin-top: 4px;">Attivato il: <strong id="activated">--</strong></p>
+      </div>
+
+      <div class="meta">
+        <p>Emesso il:</p>
+        <p style="color: #111827;"><strong id="issued">--</strong></p>
+      </div>
+
+      <div class="cost-row">
+        <span class="meta">Costo</span>
+        <span class="price">7,20 €</span>
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="meta">
+        <p style="font-weight: 600; color: #111827;">Dettagli</p>
+        <p>Codice Ticket: <strong>7577/330715</strong></p>
+      </div>
+    </div>
   </div>
+
+  <script>
+    const now = new Date();
+    const activated = new Date(now);
+    const issued = new Date(now.getTime() - 36 * 60000); // 36 minuti prima
+    const expires = new Date(activated.getTime() + 130 * 60000); // +2h10
+
+    document.getElementById('activated').textContent = 
+      activated.toLocaleDateString('it-IT') + ' - ' + 
+      activated.toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'});
+
+    document.getElementById('issued').textContent = 
+      issued.toLocaleDateString('it-IT') + ' - ' + 
+      issued.toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'});
+
+    function updateClock() {
+      const now = new Date();
+      document.getElementById('clock').textContent = 
+        now.toLocaleTimeString('it-IT');
+      
+      const diff = expires - now;
+      if (diff <= 0) {
+        document.getElementById('countdown').textContent = 'Scaduto';
+      } else {
+        const h = Math.floor(diff / 3600000);
+        const m = Math.floor((diff % 3600000) / 60000);
+        document.getElementById('countdown').textContent = h + ' h ' + m + ' min';
+      }
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+  </script>
 </body>
 </html>
