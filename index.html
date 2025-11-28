@@ -182,7 +182,7 @@
       transform: translateX(-50%);
     }
 
-    /* Barra triangolini con 3 righe animate (versione forte) */
+    /* Barra triangolini: 3 righe sincronizzate con triangoli */
     .triangles-bar {
       height: 30px;
       border-radius: 10px;
@@ -201,15 +201,15 @@
         repeating-linear-gradient(
           -60deg,
           #e5f3ff 0,
-          #e5f3ff 8px,
-          #3b82f6 8px,
-          #3b82f6 16px
+          #e5f3ff 10px,
+          #3b82f6 10px,
+          #3b82f6 20px
         );
       animation: triMove 2s linear infinite;
     }
-    .tri-row:nth-child(1) { top: 0%;      animation-duration: 2.6s; }
-    .tri-row:nth-child(2) { top: 33.33%;  animation-duration: 2.1s; }
-    .tri-row:nth-child(3) { top: 66.66%;  animation-duration: 1.7s; }
+    .tri-row:nth-child(1) { top: 0%; }
+    .tri-row:nth-child(2) { top: 33.33%; }
+    .tri-row:nth-child(3) { top: 66.66%; }
 
     @keyframes triMove {
       from { transform: translateX(0); }
