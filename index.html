@@ -21,20 +21,18 @@
     .app-header {
       background: #1f7a3a;
       color: white;
-      padding: 16px;
+      padding: 12px 16px 10px;
       display: flex;
       align-items: center;
       justify-content: center;
+      font-size: 18px;
+      font-weight: 700;
       position: sticky;
       top: 0;
       z-index: 10;
     }
-    .app-header-title {
-      font-size: 18px;
-      font-weight: 700;
-    }
 
-    /* Contenitore scrollabile su sfondo verde */
+    /* Contenitore verde scrollabile */
     .app-container {
       flex: 1;
       padding: 8px 12px 12px;
@@ -51,6 +49,7 @@
       box-shadow: 0 8px 20px rgba(0,0,0,0.15);
     }
 
+    /* Logo + intestazione */
     .logo-row {
       display: flex;
       align-items: center;
@@ -86,6 +85,7 @@
       padding: 12px 14px;
       margin-bottom: 14px;
     }
+
     .validation-header {
       display: flex;
       align-items: center;
@@ -103,6 +103,7 @@
       font-size: 20px;
       color: #6b7280;
       cursor: pointer;
+      line-height: 1;
     }
 
     .validation-content {
@@ -116,7 +117,8 @@
     .qr-wrapper img {
       width: 240px;
       max-width: 100%;
-      border-radius: 8px;
+      border-radius: 12px;
+      background: #f3f4f6;
     }
 
     .link-button {
@@ -126,6 +128,7 @@
       font-weight: 600;
       font-size: 13px;
       cursor: pointer;
+      margin-top: 4px;
     }
     .link-button:hover {
       text-decoration: underline;
@@ -143,6 +146,9 @@
       align-items: center;
       gap: 6px;
     }
+    .row-time-left .clock-icon {
+      font-size: 16px;
+    }
     .row-time-right {
       margin-left: auto;
       display: flex;
@@ -150,7 +156,7 @@
       gap: 6px;
     }
 
-    /* placeholder icone */
+    /* Lucchetto */
     .icon-lock {
       width: 16px;
       height: 16px;
@@ -260,12 +266,36 @@
       align-items: center;
       margin-bottom: 8px;
     }
+
+    /* Modale QR */
+    #qrModal {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+    }
+    #qrModal-inner {
+      background:white;
+      padding: 16px;
+      border-radius: 12px;
+      max-width: 380px;
+      width: 90%;
+      text-align:center;
+    }
+    #qrModal-inner img {
+      width: 260px;
+      max-width: 100%;
+      border-radius: 12px;
+    }
   </style>
 </head>
 <body>
   <!-- Barra superiore -->
   <div class="app-header">
-    <div class="app-header-title">Ticket attivo</div>
+    Ticket attivo
   </div>
 
   <!-- Contenitore verde scrollabile -->
@@ -294,13 +324,13 @@
             <img src="qr_ticket.png" alt="QR Code Ticket">
           </div>
 
-          <div style="text-align:center; margin-top:4px;">
+          <div style="text-align:center;">
             <button class="link-button" id="enlargeBtn">Ingrandisci QRCode</button>
           </div>
 
           <div class="row-time">
             <div class="row-time-left">
-              <span>🕒</span>
+              <span class="clock-icon">🕒</span>
               <span class="meta-strong" id="clockLabel">--:--:--</span>
             </div>
             <div class="row-time-right">
@@ -311,7 +341,7 @@
         </div>
       </div>
 
-      <!-- Barra triangoli -->
+      <!-- Barra triangolini -->
       <div class="triangles-bar">
         <div class="triangles-row"></div>
         <div class="triangles-row"></div>
@@ -352,24 +382,9 @@
   </div>
 
   <!-- Modale per ingrandire il QR -->
-  <div id="qrModal" style="
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.5);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 100;
-  ">
-    <div style="
-      background:white;
-      padding: 16px;
-      border-radius: 12px;
-      max-width: 380px;
-      width: 90%;
-      text-align:center;
-    ">
-      <img src="qr_ticket.png" alt="QR grande" style="width: 260px; max-width: 100%; border-radius:8px;">
+  <div id="qrModal">
+    <div id="qrModal-inner">
+      <img src="qr_ticket.png" alt="QR grande">
       <div style="margin-top: 12px;">
         <button class="link-button" id="closeModal">Chiudi</button>
       </div>
@@ -378,7 +393,7 @@
 
   <script>
     // Imposta tempi come nel programma: issue = activated - 36 minuti, validità 130 minuti
-    const activatedDt = new Date();                 // ora apertura pagina
+    const activatedDt = new Date();
     const issueDt = new Date(activatedDt.getTime() - 36 * 60000);
     const validMinutes = 130;
     const expiresDt = new Date(activatedDt.getTime() + validMinutes * 60000);
