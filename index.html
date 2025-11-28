@@ -11,13 +11,12 @@
     body {
       margin: 0;
       font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      background: #1f7a3a; /* PRIMARY_GREEN */
+      background: #1f7a3a;
       display: flex;
       flex-direction: column;
       min-height: 100vh;
     }
 
-    /* Barra superiore */
     .app-header {
       background: #1f7a3a;
       color: white;
@@ -32,14 +31,12 @@
       z-index: 10;
     }
 
-    /* Contenitore verde scrollabile */
     .app-container {
       flex: 1;
       padding: 8px 12px 12px;
       overflow-y: auto;
     }
 
-    /* Card bianca del ticket */
     .ticket-card {
       background: white;
       border-radius: 28px;
@@ -49,7 +46,6 @@
       box-shadow: 0 8px 20px rgba(0,0,0,0.15);
     }
 
-    /* Logo + intestazione */
     .logo-row {
       display: flex;
       align-items: center;
@@ -78,7 +74,6 @@
       margin-bottom: 14px;
     }
 
-    /* Rettangolo validazione */
     .validation-box {
       background: #f3f4f6;
       border-radius: 18px;
@@ -156,7 +151,6 @@
       gap: 6px;
     }
 
-    /* Lucchetto */
     .icon-lock {
       width: 16px;
       height: 16px;
@@ -188,37 +182,29 @@
       transform: translateX(-50%);
     }
 
-    /* Barra triangolini animati */
     .triangles-bar {
-      position: relative;
-      overflow: hidden;
-      border-radius: 10px;
       height: 30px;
+      border-radius: 10px;
       margin-bottom: 14px;
       background: linear-gradient(90deg, #e5f3ff, #c4ddff);
+      position: relative;
+      overflow: hidden;
     }
-    .triangles-row {
+    .triangles-inner {
       position: absolute;
-      width: 200%;
-      height: 33.33%;
-      left: -50%;
+      inset: 0;
       background-image:
         linear-gradient(135deg, transparent 75%, #7fb0ff 75%),
         linear-gradient(225deg, transparent 75%, #7fb0ff 75%);
       background-size: 20px 20px;
-      background-repeat: repeat-x;
-      animation: moveTriangles 4s linear infinite;
+      background-repeat: repeat;
+      animation: moveTriangles 2.5s linear infinite;
     }
-    .triangles-row:nth-child(1) { top: 0; }
-    .triangles-row:nth-child(2) { top: 33.33%; animation-duration: 3.2s; }
-    .triangles-row:nth-child(3) { top: 66.66%; animation-duration: 2.6s; }
-
     @keyframes moveTriangles {
-      from { transform: translateX(0); }
-      to   { transform: translateX(20px); }
+      from { background-position: 0 0, 0 0; }
+      to   { background-position: 40px 0, 40px 0; }
     }
 
-    /* Blocco verde tempo restante */
     .green-block {
       background: #1f7a3a;
       border-radius: 10px;
@@ -231,7 +217,6 @@
       font-weight: 700;
     }
 
-    /* Sezioni finali */
     .meta {
       color: #6b7280;
       font-size: 13px;
@@ -267,7 +252,13 @@
       margin-bottom: 8px;
     }
 
-    /* Modale QR */
+    .code-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 4px;
+    }
+
     #qrModal {
       position: fixed;
       inset: 0;
@@ -293,15 +284,10 @@
   </style>
 </head>
 <body>
-  <!-- Barra superiore -->
-  <div class="app-header">
-    Ticket attivo
-  </div>
+  <div class="app-header">Ticket attivo</div>
 
-  <!-- Contenitore verde scrollabile -->
   <div class="app-container">
     <div class="ticket-card">
-      <!-- Logo + intestazione -->
       <div class="logo-row">
         <img src="logo_fdc.png" alt="Logo FdC">
       </div>
@@ -312,7 +298,6 @@
         Il titolo dà diritto ad effettuare un viaggio di corsa semplice
       </p>
 
-      <!-- Rettangolo validazione -->
       <div class="validation-box">
         <div class="validation-header">
           <div class="section">Controllo e validazione</div>
@@ -341,14 +326,10 @@
         </div>
       </div>
 
-      <!-- Barra triangolini -->
       <div class="triangles-bar">
-        <div class="triangles-row"></div>
-        <div class="triangles-row"></div>
-        <div class="triangles-row"></div>
+        <div class="triangles-inner"></div>
       </div>
 
-      <!-- Blocco verde tempo restante -->
       <div class="green-block">
         <div>Tempo restante: <b id="remaining">2 h 10 min</b></div>
         <div style="font-size:12px; margin-top:2px;">
@@ -356,13 +337,11 @@
         </div>
       </div>
 
-      <!-- Emesso il -->
       <div class="issue-box">
         <div class="meta">Emesso il:</div>
         <div class="meta-strong" id="issuedLabel">--</div>
       </div>
 
-      <!-- Costo -->
       <div class="cost-row">
         <span class="meta">Costo</span>
         <span class="price">7,20 €</span>
@@ -370,18 +349,19 @@
 
       <div class="divider"></div>
 
-      <!-- Dettagli + codice ticket -->
       <div class="details-row">
         <span class="section">Dettagli</span>
         <button class="link-button">Leggi tutto</button>
       </div>
-      <div class="meta">
-        Codice Ticket: <span class="meta-strong">7577/330715</span>
+
+      <!-- Codice Ticket: testo a sinistra, codice a destra -->
+      <div class="code-row">
+        <span class="meta">Codice Ticket:</span>
+        <span class="meta-strong">7577/330715</span>
       </div>
     </div>
   </div>
 
-  <!-- Modale per ingrandire il QR -->
   <div id="qrModal">
     <div id="qrModal-inner">
       <img src="qr_ticket.png" alt="QR grande">
@@ -392,7 +372,6 @@
   </div>
 
   <script>
-    // Imposta tempi come nel programma: issue = activated - 36 minuti, validità 130 minuti
     const activatedDt = new Date();
     const issueDt = new Date(activatedDt.getTime() - 36 * 60000);
     const validMinutes = 130;
@@ -426,7 +405,6 @@
     setInterval(tick, 1000);
     tick();
 
-    // Toggle contenuto validazione
     const toggleBtn = document.getElementById('toggleBtn');
     const validationContent = document.getElementById('validationContent');
     toggleBtn.addEventListener('click', () => {
@@ -435,7 +413,6 @@
       toggleBtn.textContent = visible ? '˅' : '˄';
     });
 
-    // Modale QR
     const qrModal = document.getElementById('qrModal');
     document.getElementById('enlargeBtn').addEventListener('click', () => {
       qrModal.style.display = 'flex';
