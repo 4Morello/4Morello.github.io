@@ -184,9 +184,9 @@
 
     /* Barra triangolini con GIF */
     .triangles-bar {
-      height: 30px;
+      height: 34px;
       border-radius: 10px;
-      margin-bottom: 14px;
+      margin: 18px 0;
       background: #e5f3ff;
       overflow: hidden;
     }
@@ -198,13 +198,15 @@
       background-size: auto 100%;
     }
 
+    /* Blocco verde più grande e spazioso */
     .green-block {
       background: #1f7a3a;
-      border-radius: 10px;
-      padding: 8px 12px;
+      border-radius: 14px;
+      padding: 16px 18px;
       color: white;
-      margin-bottom: 14px;
-      font-size: 13px;
+      margin-bottom: 18px;
+      font-size: 15px;
+      line-height: 1.6;
     }
     .green-block b {
       font-weight: 700;
@@ -219,37 +221,45 @@
       font-size: 13px;
       font-weight: 700;
     }
+
+    /* Sezione “Emesso il” più ariosa */
     .issue-box {
-      margin-bottom: 8px;
+      margin-bottom: 14px;
     }
+
+    /* Riga costo più alta */
     .cost-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin: 10px 0;
+      margin: 16px 0;
     }
     .price {
-      font-size: 22px;
+      font-size: 24px;
       font-weight: 700;
       color: #111827;
     }
+
+    /* Divisore con più spazio */
     .divider {
       height: 1px;
       background: #e5e7eb;
-      margin: 12px 0;
+      margin: 16px 0;
     }
+
     .details-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 8px;
+      margin-bottom: 10px;
     }
 
+    /* Riga codice ticket più distanziata */
     .code-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-top: 4px;
+      margin-top: 8px;
     }
 
     #qrModal {
@@ -370,8 +380,8 @@
     const expiresDt = new Date(activatedDt.getTime() + validMinutes * 60000);
 
     function formatDateTime(d) {
-      const date = d.toLocaleDateString('it-IT');
-      const time = d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+      const date = d.toLocaleDateString("it-IT");
+      const time = d.toLocaleTimeString("it-IT", { hour: "2-digit", minute: "2-digit" });
       return date + " - " + time;
     }
 
