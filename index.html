@@ -74,9 +74,9 @@
 
     .validation-box {
       background: #f3f4f6;
-      border-radius: 18px;
+      border-radius: 18px 18px 0 0;  /* sotto quadrato */
       padding: 12px 14px;
-      margin-bottom: 0;            /* niente spazio sotto: barra azzurra tangente */
+      margin-bottom: 0;
     }
 
     .validation-header {
@@ -174,11 +174,11 @@
       transform: translateX(-50%);
     }
 
-    /* Barra triangolini con GIF, tangente al box grigio */
+    /* Barra triangolini con GIF, angoli non arrotondati */
     .triangles-bar {
       height: 34px;
-      border-radius: 0 0 10px 10px;
-      margin: 0 0 18px 0;          /* attaccata sopra, spazio solo sotto */
+      border-radius: 0;
+      margin: 0 0 18px 0;
       background: #e5f3ff;
       overflow: hidden;
     }
@@ -190,7 +190,6 @@
       background-size: auto 100%;
     }
 
-    /* Blocco verde più grande; testi principali stessa dimensione */
     .green-block {
       background: #1f7a3a;
       border-radius: 14px;
@@ -200,10 +199,10 @@
       font-size: 15px;
       line-height: 1.6;
     }
-    .green-block .line-small {
-      font-size: 13px;             /* solo “Attivato il” in piccolo dentro */
-    }
-    .green-block b { font-weight: 700; }
+    .green-block .line-main { font-size: 15px; }   /* Tempo restante */
+    .green-block .line-main b { font-weight: 700; }
+    .green-block .line-sub { font-size: 15px; }    /* Attivato il */
+    .green-block .line-sub b { font-weight: 700; }
 
     .meta {
       color: #6b7280;
@@ -224,10 +223,10 @@
       margin: 16px 0;
     }
     .cost-row .meta {
-      font-size: 15px;             /* “Costo” più grande */
+      font-size: 18px;        /* “Costo” più grande */
     }
     .price {
-      font-size: 24px;
+      font-size: 18px;        /* uguale a “Costo” */
       font-weight: 700;
       color: #111827;
     }
@@ -324,8 +323,10 @@
       </div>
 
       <div class="green-block">
-        <div>Tempo restante: <b id="remaining">2 h 10 min</b></div>
-        <div class="line-small">
+        <div class="line-main">
+          Tempo restante: <b id="remaining">2 h 10 min</b>
+        </div>
+        <div class="line-sub">
           Attivato il: <b id="activatedLabel">--</b>
         </div>
       </div>
