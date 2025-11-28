@@ -182,38 +182,20 @@
       transform: translateX(-50%);
     }
 
-    /* Barra triangolini: 3 righe sincronizzate con triangoli */
+    /* Barra triangolini con GIF */
     .triangles-bar {
       height: 30px;
       border-radius: 10px;
       margin-bottom: 14px;
       background: #e5f3ff;
-      position: relative;
       overflow: hidden;
     }
-
-    .tri-row {
-      position: absolute;
-      left: -60px;
-      right: -60px;
-      height: 33.33%;
-      background:
-        repeating-linear-gradient(
-          -60deg,
-          #e5f3ff 0,
-          #e5f3ff 10px,
-          #3b82f6 10px,
-          #3b82f6 20px
-        );
-      animation: triMove 2s linear infinite;
-    }
-    .tri-row:nth-child(1) { top: 0%; }
-    .tri-row:nth-child(2) { top: 33.33%; }
-    .tri-row:nth-child(3) { top: 66.66%; }
-
-    @keyframes triMove {
-      from { transform: translateX(0); }
-      to   { transform: translateX(40px); }
+    .triangles-bar-inner {
+      width: 100%;
+      height: 100%;
+      background-image: url("triangoli.gif");
+      background-repeat: repeat-x;
+      background-size: auto 100%;
     }
 
     .green-block {
@@ -338,9 +320,7 @@
       </div>
 
       <div class="triangles-bar">
-        <div class="tri-row"></div>
-        <div class="tri-row"></div>
-        <div class="tri-row"></div>
+        <div class="triangles-bar-inner"></div>
       </div>
 
       <div class="green-block">
@@ -392,48 +372,48 @@
     function formatDateTime(d) {
       const date = d.toLocaleDateString('it-IT');
       const time = d.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
-      return date + ' - ' + time;
+      return date + " - " + time;
     }
 
-    document.getElementById('activatedLabel').textContent = formatDateTime(activatedDt);
-    document.getElementById('issuedLabel').textContent = formatDateTime(issueDt);
+    document.getElementById("activatedLabel").textContent = formatDateTime(activatedDt);
+    document.getElementById("issuedLabel").textContent = formatDateTime(issueDt);
 
     function tick() {
       const now = new Date();
-      document.getElementById('clockLabel').textContent =
-        now.toLocaleTimeString('it-IT');
+      document.getElementById("clockLabel").textContent =
+        now.toLocaleTimeString("it-IT");
 
       const diffMs = expiresDt - now;
-      const remainingEl = document.getElementById('remaining');
+      const remainingEl = document.getElementById("remaining");
 
       if (diffMs <= 0) {
-        remainingEl.textContent = 'Scaduto';
+        remainingEl.textContent = "Scaduto";
       } else {
         const h = Math.floor(diffMs / 3600000);
         const m = Math.floor((diffMs % 3600000) / 60000);
-        remainingEl.textContent = h + ' h ' + m + ' min';
+        remainingEl.textContent = h + " h " + m + " min";
       }
     }
     setInterval(tick, 1000);
     tick();
 
-    const toggleBtn = document.getElementById('toggleBtn');
-    const validationContent = document.getElementById('validationContent');
-    toggleBtn.addEventListener('click', () => {
-      const visible = validationContent.style.display !== 'none';
-      validationContent.style.display = visible ? 'none' : 'block';
-      toggleBtn.textContent = visible ? '˅' : '˄';
+    const toggleBtn = document.getElementById("toggleBtn");
+    const validationContent = document.getElementById("validationContent");
+    toggleBtn.addEventListener("click", () => {
+      const visible = validationContent.style.display !== "none";
+      validationContent.style.display = visible ? "none" : "block";
+      toggleBtn.textContent = visible ? "˅" : "˄";
     });
 
-    const qrModal = document.getElementById('qrModal');
-    document.getElementById('enlargeBtn').addEventListener('click', () => {
-      qrModal.style.display = 'flex';
+    const qrModal = document.getElementById("qrModal");
+    document.getElementById("enlargeBtn").addEventListener("click", () => {
+      qrModal.style.display = "flex";
     });
-    document.getElementById('closeModal').addEventListener('click', () => {
-      qrModal.style.display = 'none';
+    document.getElementById("closeModal").addEventListener("click", () => {
+      qrModal.style.display = "none";
     });
-    qrModal.addEventListener('click', (e) => {
-      if (e.target === qrModal) qrModal.style.display = 'none';
+    qrModal.addEventListener("click", (e) => {
+      if (e.target === qrModal) qrModal.style.display = "none";
     });
   </script>
 </body>
